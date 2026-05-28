@@ -1,9 +1,9 @@
-
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Encuesta de Comida</title>
+<title>Encuesta Online</title>
 
 <style>
 body{
@@ -20,14 +20,13 @@ body{
     background:#2b2b2b;
     padding:25px;
     border-radius:15px;
-    width:320px;
+    width:330px;
     text-align:center;
 }
 
 h4{
     color:#bdbdbd;
     margin-top:-10px;
-    margin-bottom:15px;
     font-weight:normal;
 }
 
@@ -47,6 +46,12 @@ button:hover{
     background:#666;
 }
 
+#mensaje{
+    margin-top:15px;
+    color:#00ff99;
+    font-weight:bold;
+}
+
 #admin{
     display:none;
     margin-top:20px;
@@ -54,12 +59,6 @@ button:hover{
     padding:10px;
     border-radius:10px;
     text-align:left;
-}
-
-#mensaje{
-    margin-top:15px;
-    color:#00ff99;
-    font-weight:bold;
 }
 </style>
 </head>
@@ -73,19 +72,19 @@ button:hover{
     <h4>Encuesta realizada por el 2 BGU "A"</h4>
 
     <p>
-        Encuesta de Platos típicos de la sierra 
+        Encuesta de Platos típicos de la sierra
         elije el que más te guste.
     </p>
 
-    <button onclick="votar('Locro de papa')">Locro de papa</button>
+    <button onclick="votar('locro')">Locro de papa</button>
 
-    <button onclick="votar('Horneado')">Horneado</button>
+    <button onclick="votar('horneado')">Horneado</button>
 
-    <button onclick="votar('Llapingachos')">Llapingachos</button>
+    <button onclick="votar('llapingachos')">Llapingachos</button>
 
-    <button onclick="votar('Fritada')">Fritada</button>
+    <button onclick="votar('fritada')">Fritada</button>
 
-    <button onclick="votar('Humitas')">Humitas</button>
+    <button onclick="votar('humitas')">Humitas</button>
 
     <div id="mensaje"></div>
 
@@ -111,19 +110,70 @@ button:hover{
 
 </div>
 
-<script>
+<script type="module">
 
-let votos = {
-    "Locro de papa":0,
-    "Horneado":0,
-    "Llapingachos":0,
-    "Fritada":0,
-    "Humitas":0
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+getFirestore,
+doc,
+getDoc,
+setDoc,
+updateDoc,
+increment
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+
+const firebaseConfig = {
+
+  apiKey: "AIzaSyDQCpdCLhKb7YPLfUcAdos8UL5NzKdGlFM",
+
+  authDomain: "encuesta-2bgu.firebaseapp.com",
+
+  projectId: "encuesta-2bgu",
+
+  storageBucket: "encuesta-2bgu.firebasestorage.app",
+
+  messagingSenderId: "888710509133",
+
+  appId: "1:888710509133:web:1de7a62b47fd659586e204",
+
+  measurementId: "G-W3D6PHCGD5"
+
 };
 
-function votar(comida){
+const app = initializeApp(firebaseConfig);
 
-    // Verifica si ya votó
+const db = getFirestore(app);
+
+const encuestaRef = doc(db, "encuesta", "votos");
+
+
+async function iniciar(){
+
+    const snap = await getDoc(encuestaRef);
+
+    if(!snap.exists()){
+
+        await setDoc(encuestaRef, {
+
+            locro:0,
+            horneado:0,
+            llapingachos:0,
+            fritada:0,
+            humitas:0
+
+        });
+    }
+
+    cargarResultados();
+}
+
+iniciar();
+
+
+window.votar = async function(tipo){
+
     if(localStorage.getItem("yaVoto")){
 
         document.getElementById("mensaje").innerText =
@@ -132,59 +182,74 @@ function votar(comida){
         return;
     }
 
-    votos[comida]++;
+    await updateDoc(encuestaRef, {
 
-    actualizar();
+        [tipo]: increment(1)
 
-    // Guarda que ya votó
+    });
+
     localStorage.setItem("yaVoto", "si");
 
     document.getElementById("mensaje").innerText =
     "Gracias por tu votación.";
+
+    cargarResultados();
 }
 
-function actualizar(){
 
-    let total = 0;
+async function cargarResultados(){
 
-    for(let comida in votos){
-        total += votos[comida];
-    }
+    const snap = await getDoc(encuestaRef);
+
+    const datos = snap.data();
+
+    let total =
+        datos.locro +
+        datos.horneado +
+        datos.llapingachos +
+        datos.fritada +
+        datos.humitas;
 
     document.getElementById("total").innerText = total;
 
     document.getElementById("locro").innerText =
-        porcentaje("Locro de papa", total);
+        porcentaje(datos.locro,total);
 
     document.getElementById("horneado").innerText =
-        porcentaje("Horneado", total);
+        porcentaje(datos.horneado,total);
 
     document.getElementById("llapingachos").innerText =
-        porcentaje("Llapingachos", total);
+        porcentaje(datos.llapingachos,total);
 
     document.getElementById("fritada").innerText =
-        porcentaje("Fritada", total);
+        porcentaje(datos.fritada,total);
 
     document.getElementById("humitas").innerText =
-        porcentaje("Humitas", total);
+        porcentaje(datos.humitas,total);
 }
 
-function porcentaje(comida, total){
+function porcentaje(valor,total){
 
     if(total === 0){
         return "0%";
     }
 
-    return ((votos[comida] / total) * 100).toFixed(1) + "%";
+    return ((valor / total) * 100).toFixed(1) + "%";
 }
 
-function abrirAdmin(){
+
+window.abrirAdmin = function(){
 
     let clave = prompt("Ingrese contraseña admin");
 
     if(clave === "1234"){
+
         document.getElementById("admin").style.display = "block";
+
+        cargarResultados();
+
     }else{
+
         alert("Contraseña incorrecta");
     }
 }
