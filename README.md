@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Encuesta Online</title>
+<title>Encuesta de Comida</title>
 
 <style>
 body{
@@ -20,13 +20,14 @@ body{
     background:#2b2b2b;
     padding:25px;
     border-radius:15px;
-    width:330px;
+    width:320px;
     text-align:center;
 }
 
 h4{
     color:#bdbdbd;
     margin-top:-10px;
+    margin-bottom:15px;
     font-weight:normal;
 }
 
@@ -46,12 +47,6 @@ button:hover{
     background:#666;
 }
 
-#mensaje{
-    margin-top:15px;
-    color:#00ff99;
-    font-weight:bold;
-}
-
 #admin{
     display:none;
     margin-top:20px;
@@ -59,6 +54,12 @@ button:hover{
     padding:10px;
     border-radius:10px;
     text-align:left;
+}
+
+#mensaje{
+    margin-top:15px;
+    color:#00ff99;
+    font-weight:bold;
 }
 </style>
 </head>
@@ -76,15 +77,15 @@ button:hover{
         elije el que más te guste.
     </p>
 
-    <button onclick="votar('locro')">Locro de papa</button>
+    <button onclick="votar('Locro de papa')">Locro de papa</button>
 
-    <button onclick="votar('horneado')">Horneado</button>
+    <button onclick="votar('Horneado')">Horneado</button>
 
-    <button onclick="votar('llapingachos')">Llapingachos</button>
+    <button onclick="votar('Llapingachos')">Llapingachos</button>
 
-    <button onclick="votar('fritada')">Fritada</button>
+    <button onclick="votar('Fritada')">Fritada</button>
 
-    <button onclick="votar('humitas')">Humitas</button>
+    <button onclick="votar('Humitas')">Humitas</button>
 
     <div id="mensaje"></div>
 
@@ -110,72 +111,19 @@ button:hover{
 
 </div>
 
-<!-- Firebase -->
-<script type="module">
+<script>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
-import {
-getFirestore,
-doc,
-getDoc,
-setDoc,
-updateDoc,
-increment
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-
-// PEGA AQUÍ TUS DATOS DE FIREBASE
-const firebaseConfig = {
-
-  apiKey: "TU_API_KEY",
-
-  authDomain: "TU_PROYECTO.firebaseapp.com",
-
-  projectId: "TU_PROYECTO",
-
-  storageBucket: "TU_PROYECTO.appspot.com",
-
-  messagingSenderId: "123456",
-
-  appId: "TU_APP_ID"
-
+let votos = {
+    "Locro de papa":0,
+    "Horneado":0,
+    "Llapingachos":0,
+    "Fritada":0,
+    "Humitas":0
 };
 
-const app = initializeApp(firebaseConfig);
+function votar(comida){
 
-const db = getFirestore(app);
-
-const encuestaRef = doc(db, "encuesta", "votos");
-
-
-// Crear documento si no existe
-async function iniciar(){
-
-    const snap = await getDoc(encuestaRef);
-
-    if(!snap.exists()){
-
-        await setDoc(encuestaRef, {
-
-            locro:0,
-            horneado:0,
-            llapingachos:0,
-            fritada:0,
-            humitas:0
-
-        });
-    }
-
-    cargarResultados();
-}
-
-iniciar();
-
-
-// Votar
-window.votar = async function(tipo){
-
+    // Verifica si ya votó
     if(localStorage.getItem("yaVoto")){
 
         document.getElementById("mensaje").innerText =
@@ -184,76 +132,59 @@ window.votar = async function(tipo){
         return;
     }
 
-    await updateDoc(encuestaRef, {
+    votos[comida]++;
 
-        [tipo]: increment(1)
+    actualizar();
 
-    });
-
+    // Guarda que ya votó
     localStorage.setItem("yaVoto", "si");
 
     document.getElementById("mensaje").innerText =
     "Gracias por tu votación.";
-
-    cargarResultados();
 }
 
+function actualizar(){
 
-// Cargar resultados
-async function cargarResultados(){
+    let total = 0;
 
-    const snap = await getDoc(encuestaRef);
-
-    const datos = snap.data();
-
-    let total =
-        datos.locro +
-        datos.horneado +
-        datos.llapingachos +
-        datos.fritada +
-        datos.humitas;
+    for(let comida in votos){
+        total += votos[comida];
+    }
 
     document.getElementById("total").innerText = total;
 
     document.getElementById("locro").innerText =
-        porcentaje(datos.locro,total);
+        porcentaje("Locro de papa", total);
 
     document.getElementById("horneado").innerText =
-        porcentaje(datos.horneado,total);
+        porcentaje("Horneado", total);
 
     document.getElementById("llapingachos").innerText =
-        porcentaje(datos.llapingachos,total);
+        porcentaje("Llapingachos", total);
 
     document.getElementById("fritada").innerText =
-        porcentaje(datos.fritada,total);
+        porcentaje("Fritada", total);
 
     document.getElementById("humitas").innerText =
-        porcentaje(datos.humitas,total);
+        porcentaje("Humitas", total);
 }
 
-function porcentaje(valor,total){
+function porcentaje(comida, total){
 
     if(total === 0){
         return "0%";
     }
 
-    return ((valor / total) * 100).toFixed(1) + "%";
+    return ((votos[comida] / total) * 100).toFixed(1) + "%";
 }
 
-
-// Admin
-window.abrirAdmin = function(){
+function abrirAdmin(){
 
     let clave = prompt("Ingrese contraseña admin");
 
     if(clave === "1234"){
-
         document.getElementById("admin").style.display = "block";
-
-        cargarResultados();
-
     }else{
-
         alert("Contraseña incorrecta");
     }
 }
